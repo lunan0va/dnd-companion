@@ -35,9 +35,10 @@ def fetch_spell_details_from_dnd_api(spell_index: str):
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 404:
             return None
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,detail=f"Error fetching from D&D API: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error fetching from D&D API: {e}")
     except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,detail=f"Network error connecting to D&D API: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail=f"Network error connecting to D&D API: {e}")
 
 
 def translate_text_with_deepl(text_en: str, target_lang: str = 'de') -> str:
@@ -53,6 +54,7 @@ def translate_text_with_deepl(text_en: str, target_lang: str = 'de') -> str:
 
 class SpellCreateRequest(BaseModel):
     name: str
+
 
 class SpellResponse(BaseModel):
     id: int
@@ -90,8 +92,10 @@ def get_spell(spell_id: int, db: Session = Depends(get_db)):
     return spell
 
 
-@router.post("/spells", response_model=SpellResponse, status_code=status.HTTP_201_CREATED, summary="Create a new spell from D&D API by name")
-def create_spell_from_api(request: SpellCreateRequest, current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
+@router.post("/spells", response_model=SpellResponse, status_code=status.HTTP_201_CREATED,
+             summary="Create a new spell from D&D API by name")
+def create_spell_from_api(request: SpellCreateRequest, current_user: UserResponse = Depends(get_current_user),
+                          db: Session = Depends(get_db)):
     spell_name_en_normalized = _normalize_spell_name(request.name)
 
     existing_spell = db.query(Spell).filter(Spell.dnd_api_id == spell_name_en_normalized).first()
@@ -101,7 +105,8 @@ def create_spell_from_api(request: SpellCreateRequest, current_user: UserRespons
     api_data = fetch_spell_details_from_dnd_api(spell_name_en_normalized)
 
     if not api_data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Spell '{request.name}' not found on D&D 5e API.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Spell '{request.name}' not found on D&D 5e API.")
 
     name_en = api_data.get("name")
     description_en = "\n".join(api_data.get("desc", []))

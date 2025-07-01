@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from pydantic import BaseModel
 
 from database import get_db
-from models import Character, User, Spell, CharacterSpell
+from models import Character, User, Spell, CharacterSpell, Item, CharacterItem
 from routes.users import get_current_user, UserResponse
 
 router = APIRouter()
@@ -63,6 +63,14 @@ class SpellForCharacterResponse(BaseModel):
         from_attributes = True
 
 
+class ItemForCharacterResponse(BaseModel):
+    name_de: str
+    description_de: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class CharacterResponse(BaseModel):
     id: int
     name: str
@@ -72,6 +80,7 @@ class CharacterResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     spells: List[SpellForCharacterResponse] = []
+    items: List[ItemForCharacterResponse] = []
 
     class Config:
         from_attributes = True
@@ -92,6 +101,7 @@ def get_all_characters(current_user: UserResponse = Depends(get_current_user), d
         char_dict = char_orm.__dict__.copy()
 
         char_dict["spells"] = [SpellForCharacterResponse.model_validate(cs.spell) for cs in char_orm.character_spells]
+        char_dict["items"] = [ItemForCharacterResponse.model_validate(ci.item) for ci in char_orm.character_items]
 
         for k in list(char_dict.keys()):
             if k.startswith("_sa_"):
@@ -114,6 +124,7 @@ def get_character(character_id: int, current_user: UserResponse = Depends(get_cu
 
     char_dict = character.__dict__.copy()
     char_dict["spells"] = [SpellForCharacterResponse.model_validate(cs.spell) for cs in character.character_spells]
+    char_dict["items"] = [ItemForCharacterResponse.model_validate(ci.item) for ci in char_orm.character_items]
 
     for k in list(char_dict.keys()):
         if k.startswith("_sa_"):
@@ -228,6 +239,56 @@ def remove_spell_from_character(character_id: int, spell_id: int,
     if not association_to_delete:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Spell is not associated with this character.")
+
+    db.delete(association_to_delete)
+    db.commit()
+
+    return
+
+
+@router.post("/characters/{character_id}/items/{item_id}", status_code=status.HTTP_201_CREATED,
+             summary="Add an item to a character")
+def add_item_to_character(character_id: int, item_id: int, current_user: UserResponse = Depends(get_current_user),
+                          db: Session = Depends(get_db)):
+    character = db.query(Character).filter(
+        (Character.id == character_id) & (Character.user_id == current_user.id)).first()
+    if not character:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user.")
+
+    item = db.query(Item).filter(Item.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found.")
+
+    existing_association = db.query(CharacterItem).filter(
+        (CharacterItem.character_id == character_id) & (CharacterItem.item_id == item_id)).first()
+    if existing_association:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="Item is already associated with this character.")
+
+    character_item = CharacterItem(character_id=character_id, item_id=item_id)
+    db.add(character_item)
+    db.commit()
+
+    return {"message": f"Item '{item.name_en}' added to character '{character.name}' successfully."}
+
+
+@router.delete("/characters/{character_id}/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT,
+               summary="Remove an item from a character")
+def remove_item_from_character(character_id: int, item_id: int,
+                               current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
+    character = db.query(Character).filter(
+        (Character.id == character_id) & (Character.user_id == current_user.id)
+    ).first()
+    if not character:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user.")
+
+    association_to_delete = db.query(CharacterItem).filter(
+        (CharacterItem.character_id == character_id) & (CharacterItem.item_id == item_id)
+    ).first()
+
+    if not association_to_delete:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Item is not associated with this character.")
 
     db.delete(association_to_delete)
     db.commit()
