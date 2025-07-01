@@ -44,7 +44,7 @@ def get_all_spells(db: Session = Depends(get_db)):
     spells_from_db = db.query(Spell).all()
     if not spells_from_db:
         raise_api_error(
-            204,
+            404,
             "NO_SPELLS_FOUND",
             "No spells found."
         )

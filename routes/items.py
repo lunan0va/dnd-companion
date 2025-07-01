@@ -38,7 +38,7 @@ def get_all_items(db: Session = Depends(get_db)):
     items_from_db = db.query(Item).all()
     if not items_from_db:
         raise_api_error(
-            204,
+            404,
             "NO_ITEMS_FOUND",
             "No items found."
         )

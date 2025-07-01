@@ -28,8 +28,8 @@ class Character(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     owner = relationship("User", back_populates="characters")
-    character_items = relationship("CharacterItem", back_populates="character")
-    character_spells = relationship("CharacterSpell", back_populates="character")
+    items = relationship("CharacterItem", back_populates="character", cascade="all, delete-orphan")
+    spells = relationship("CharacterSpell", back_populates="character", cascade="all, delete-orphan")
 
 
 class Item(Base):
@@ -74,7 +74,7 @@ class CharacterItem(Base):
     character_id = Column(Integer, ForeignKey("characters.id"), primary_key=True)
     item_id = Column(Integer, ForeignKey("items.id"), primary_key=True)
 
-    character = relationship("Character", back_populates="character_items")
+    character = relationship("Character", back_populates="items")
     item = relationship("Item", back_populates="character_items")
 
 
@@ -84,7 +84,7 @@ class CharacterSpell(Base):
     character_id = Column(Integer, ForeignKey("characters.id"), primary_key=True)
     spell_id = Column(Integer, ForeignKey("spells.id"), primary_key=True)
 
-    character = relationship("Character", back_populates="character_spells")
+    character = relationship("Character", back_populates="spells")
     spell = relationship("Spell", back_populates="character_spells")
 
     __table_args__ = (UniqueConstraint("character_id", "spell_id", name="_character_spell_uc"),)

@@ -4,7 +4,7 @@ from typing import List, Optional
 import requests
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session, selectinload
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from database import get_db
 from models import Character, User, Spell, CharacterSpell, Item, CharacterItem
@@ -84,6 +84,20 @@ class CharacterResponse(BaseModel):
     spells: List[SpellForCharacterResponse] = []
     items: List[ItemForCharacterResponse] = []
 
+    @field_validator('spells', mode='before')
+    @classmethod
+    def transform_spells(cls, v):
+        if isinstance(v, list) and all(isinstance(i, CharacterSpell) for i in v):
+            return [cs.spell for cs in v]
+        return v
+
+    @field_validator('items', mode='before')
+    @classmethod
+    def transform_items(cls, v):
+        if isinstance(v, list) and all(isinstance(i, CharacterItem) for i in v):
+            return [ci.item for ci in v]
+        return v
+
     class Config:
         from_attributes = True
 
@@ -92,38 +106,22 @@ class CharacterResponse(BaseModel):
             summary="Retrieve all characters for the current user")
 def get_all_characters(current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
     characters = db.query(Character).options(
-        selectinload(Character.character_spells).joinedload(CharacterSpell.spell)).filter(
-        Character.user_id == current_user.id).all()
+        selectinload(Character.spells).joinedload(CharacterSpell.spell),
+        selectinload(Character.items).joinedload(CharacterItem.item)
+    ).filter(Character.user_id == current_user.id).all()
 
-    if not characters:
-        raise_api_error(
-            204,
-            "NO_CHARACTERS_FOUND",
-            "No characters found for this user."
-        )
-
-    response_characters = []
-    for char_orm in characters:
-        char_dict = char_orm.__dict__.copy()
-
-        char_dict["spells"] = [SpellForCharacterResponse.model_validate(cs.spell) for cs in char_orm.character_spells]
-        char_dict["items"] = [ItemForCharacterResponse.model_validate(ci.item) for ci in char_orm.character_items]
-
-        for k in list(char_dict.keys()):
-            if k.startswith("_sa_"):
-                del char_dict[k]
-
-        response_characters.append(CharacterResponse(**char_dict))
-
-    return response_characters
+    return characters
 
 
 @router.get("/characters/{character_id}", response_model=CharacterResponse, summary="Retrieve a single character by ID")
 def get_character(character_id: int, current_user: UserResponse = Depends(get_current_user),
                   db: Session = Depends(get_db)):
     character = db.query(Character).options(
-        selectinload(Character.character_spells).joinedload(CharacterSpell.spell)).filter(
-        (Character.id == character_id) & (Character.user_id == current_user.id)).first()
+        selectinload(Character.spells).joinedload(CharacterSpell.spell),
+        selectinload(Character.items).joinedload(CharacterItem.item)
+    ).filter(
+        (Character.id == character_id) & (Character.user_id == current_user.id)
+    ).first()
 
     if not character:
         raise_api_error(
@@ -132,15 +130,7 @@ def get_character(character_id: int, current_user: UserResponse = Depends(get_cu
             "Character not found or not owned by user."
         )
 
-    char_dict = character.__dict__.copy()
-    char_dict["spells"] = [SpellForCharacterResponse.model_validate(cs.spell) for cs in character.character_spells]
-    char_dict["items"] = [ItemForCharacterResponse.model_validate(ci.item) for ci in character.character_items]
-
-    for k in list(char_dict.keys()):
-        if k.startswith("_sa_"):
-            del char_dict[k]
-
-    return CharacterResponse(**char_dict)
+    return character
 
 
 @router.post("/characters", response_model=CharacterResponse, status_code=status.HTTP_201_CREATED,
