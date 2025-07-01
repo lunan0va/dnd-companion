@@ -36,6 +36,9 @@ class UserResponse(BaseModel):
     id: int
     username: str
 
+    class Config:
+        from_attributes = True
+
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -63,11 +66,10 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 @router.get("/users", response_model=list[UserResponse], summary="Retrieve all users")
 def get_users(db: Session = Depends(get_db)):
-    users_from_db = db.query(User).all()
-    return [UserResponse(id=user.id, username=user.username) for user in users_from_db]
+    return db.query(User).all()
 
 
-@router.post("/register", response_model=UserResponse, summary="Register a new user and get an access token")
+@router.post("/register", response_model=Token, summary="Register a new user and get an access token")
 def register_user(user_data: UserRegister, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.username == user_data.username).first()
     if existing_user:

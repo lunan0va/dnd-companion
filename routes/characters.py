@@ -6,11 +6,9 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session, selectinload
 from pydantic import BaseModel
 
-
 from database import get_db
 from models import Character, User, Spell, CharacterSpell
 from routes.users import get_current_user, UserResponse
-
 
 router = APIRouter()
 
@@ -78,9 +76,13 @@ class CharacterResponse(BaseModel):
     class Config:
         from_attributes = True
 
-@router.get("/characters", response_model=List[CharacterResponse], summary="Retrieve all characters for the current user")
-def get_all_characters(current_user: UserResponse = Depends(get_current_user),db: Session = Depends(get_db)):
-    characters = db.query(Character).options(selectinload(Character.character_spells).joinedload(CharacterSpell.spell)).filter(Character.user_id == current_user.id).all()
+
+@router.get("/characters", response_model=List[CharacterResponse],
+            summary="Retrieve all characters for the current user")
+def get_all_characters(current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
+    characters = db.query(Character).options(
+        selectinload(Character.character_spells).joinedload(CharacterSpell.spell)).filter(
+        Character.user_id == current_user.id).all()
 
     if not characters:
         raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="No characters found for this user.")
@@ -101,8 +103,10 @@ def get_all_characters(current_user: UserResponse = Depends(get_current_user),db
 
 
 @router.get("/characters/{character_id}", response_model=CharacterResponse, summary="Retrieve a single character by ID")
-def get_character(character_id: int, current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
-    character = db.query(Character).options(selectinload(Character.character_spells).joinedload(CharacterSpell.spell)).filter(
+def get_character(character_id: int, current_user: UserResponse = Depends(get_current_user),
+                  db: Session = Depends(get_db)):
+    character = db.query(Character).options(
+        selectinload(Character.character_spells).joinedload(CharacterSpell.spell)).filter(
         (Character.id == character_id) & (Character.user_id == current_user.id)).first()
 
     if not character:
@@ -118,15 +122,19 @@ def get_character(character_id: int, current_user: UserResponse = Depends(get_cu
     return CharacterResponse(**char_dict)
 
 
-@router.post("/characters", response_model=CharacterResponse, status_code=status.HTTP_201_CREATED, summary="Create a new character"
-)
-def create_character(char_create: CharacterCreate, current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
+@router.post("/characters", response_model=CharacterResponse, status_code=status.HTTP_201_CREATED,
+             summary="Create a new character"
+             )
+def create_character(char_create: CharacterCreate, current_user: UserResponse = Depends(get_current_user),
+                     db: Session = Depends(get_db)):
     valid_classes = fetch_dnd_classes_from_api()
 
     if char_create.gameclass.lower() not in [cls.lower() for cls in valid_classes]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid class name. Allowed classes are: {', '.join(valid_classes)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Invalid class name. Allowed classes are: {', '.join(valid_classes)}")
 
-    new_character = Character(name=char_create.name, gameclass=char_create.gameclass, level=char_create.level, user_id=current_user.id)
+    new_character = Character(name=char_create.name, gameclass=char_create.gameclass, level=char_create.level,
+                              user_id=current_user.id)
     db.add(new_character)
     db.commit()
     db.refresh(new_character)
@@ -134,9 +142,11 @@ def create_character(char_create: CharacterCreate, current_user: UserResponse = 
     return new_character
 
 
-@router.put("/characters/{character_id}", response_model=CharacterResponse,summary="Update an existing character")
-def update_character(character_id: int, char_update: CharacterUpdate, current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
-    character = db.query(Character).filter((Character.id == character_id) & (Character.user_id == current_user.id)).first()
+@router.put("/characters/{character_id}", response_model=CharacterResponse, summary="Update an existing character")
+def update_character(character_id: int, char_update: CharacterUpdate,
+                     current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
+    character = db.query(Character).filter(
+        (Character.id == character_id) & (Character.user_id == current_user.id)).first()
 
     if not character:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user")
@@ -146,7 +156,8 @@ def update_character(character_id: int, char_update: CharacterUpdate, current_us
     if "gameclass" in update_data:
         valid_classes = fetch_dnd_classes_from_api()
         if update_data["gameclass"].lower() not in [cls.lower() for cls in valid_classes]:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid class name. Allowed classes are: {', '.join(valid_classes)}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f"Invalid class name. Allowed classes are: {', '.join(valid_classes)}")
 
     for key, value in update_data.items():
         setattr(character, key, value)
@@ -159,8 +170,10 @@ def update_character(character_id: int, char_update: CharacterUpdate, current_us
 
 
 @router.delete("/characters/{character_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a character")
-def delete_character(character_id: int, current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
-    character = db.query(Character).filter((Character.id == character_id) & (Character.user_id == current_user.id)).first()
+def delete_character(character_id: int, current_user: UserResponse = Depends(get_current_user),
+                     db: Session = Depends(get_db)):
+    character = db.query(Character).filter(
+        (Character.id == character_id) & (Character.user_id == current_user.id)).first()
 
     if not character:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user")
@@ -171,9 +184,12 @@ def delete_character(character_id: int, current_user: UserResponse = Depends(get
     return
 
 
-@router.post("/characters/{character_id}/spells/{spell_id}", status_code=status.HTTP_201_CREATED, summary="Add a spell to a character")
-def add_spell_to_character(character_id: int, spell_id: int, current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
-    character = db.query(Character).filter((Character.id == character_id) & (Character.user_id == current_user.id)).first()
+@router.post("/characters/{character_id}/spells/{spell_id}", status_code=status.HTTP_201_CREATED,
+             summary="Add a spell to a character")
+def add_spell_to_character(character_id: int, spell_id: int, current_user: UserResponse = Depends(get_current_user),
+                           db: Session = Depends(get_db)):
+    character = db.query(Character).filter(
+        (Character.id == character_id) & (Character.user_id == current_user.id)).first()
     if not character:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user.")
 
@@ -181,9 +197,11 @@ def add_spell_to_character(character_id: int, spell_id: int, current_user: UserR
     if not spell:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spell not found.")
 
-    existing_association = db.query(CharacterSpell).filter((CharacterSpell.character_id == character_id) &(CharacterSpell.spell_id == spell_id)).first()
+    existing_association = db.query(CharacterSpell).filter(
+        (CharacterSpell.character_id == character_id) & (CharacterSpell.spell_id == spell_id)).first()
     if existing_association:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Spell is already associated with this character.")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="Spell is already associated with this character.")
 
     character_spell = CharacterSpell(character_id=character_id, spell_id=spell_id)
     db.add(character_spell)
@@ -191,3 +209,27 @@ def add_spell_to_character(character_id: int, spell_id: int, current_user: UserR
     db.refresh(character_spell)
 
     return {"message": f"Spell '{spell.name_en}' added to character '{character.name}' successfully."}
+
+
+@router.delete("/characters/{character_id}/spells/{spell_id}", status_code=status.HTTP_204_NO_CONTENT,
+               summary="Remove a spell from a character")
+def remove_spell_from_character(character_id: int, spell_id: int,
+                                current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
+    character = db.query(Character).filter(
+        (Character.id == character_id) & (Character.user_id == current_user.id)
+    ).first()
+    if not character:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user.")
+
+    association_to_delete = db.query(CharacterSpell).filter(
+        (CharacterSpell.character_id == character_id) & (CharacterSpell.spell_id == spell_id)
+    ).first()
+
+    if not association_to_delete:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Spell is not associated with this character.")
+
+    db.delete(association_to_delete)
+    db.commit()
+
+    return
