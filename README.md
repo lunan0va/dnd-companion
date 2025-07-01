@@ -7,22 +7,37 @@ Items und Zauber werden beim ersten Hinzufügen zu einem Charakter automatisch a
 
 ## Features
 
-- **Benutzerverwaltung** Registrierung, Login
-- **Charakterverwaltung:** Anlegen, Anzeigen, Bearbeiten, Löschen von Charakteren
-- **Zauber:** Anlegen, Anzeigen, Zuordnen/Entfernen von Zaubern zu/von Charakteren (inkl. Integration externer D&D 5e API)
-- **Items:** Anlegen, Anzeigen, Zuordnen/Entfernen von Items zu/von Charakteren (inkl. Integration externer D&D 5e API)
-- **Rechteverwaltung:** Jeder Benutzer sieht und bearbeitet nur seine eigenen Charaktere/Items/Spells
+- **Benutzerverwaltung** Sichere Registrierung und Login über JWT
+- **Charakterverwaltung:** Vollständige CRUD-Operationen für Charaktere.
+- **Zauber & Items:**
+  - Dynamisches Laden von Zauber- und Item-Daten aus der externen D&D 5e API.
+  - Automatische Übersetzung der Daten ins Deutsche via DeepL API.
+  - Lokales Caching der Daten in der PostgreSQL-Datenbank zur Performance-Steigerung.
+-   **Verknüpfungen:** Zuordnen und Entfernen von Zaubern und Items zu/von Charakteren.
+-   **Rechteverwaltung:** Jeder Benutzer kann nur seine eigenen Charaktere und deren Verknüpfungen einsehen und bearbeiten.
 
 ## Tech Stack
 
+### Backend
 - [FastAPI](https://fastapi.tiangolo.com/)
+- Uvicorn
+- Pydantic
+
+### Datenbank
 - [PostgreSQL](https://www.postgresql.org/)
+- [SQLAlchemy](https://www.sqlalchemy.org/)
+
+### Authentifizierung
+- Passlib
+- bcrypt
+
+### Externe  APIs
 - [dnd5eapi.co](https://www.dnd5eapi.co/) als externe Quelle für D&D-Daten
 - [DeepL API](https://developers.deepl.com/docs) für Übersetzung von D&D-Daten
 
 ## Datenmodell
 
-*ER Bild folgt*
+https://dbdiagram.io/d/6849a0a7a463a450da194ef0
 
 **Wichtige Tabellen:**
 
