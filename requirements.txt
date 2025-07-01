@@ -1,0 +1,11 @@
+requests~=2.32.4
+python-dotenv~=1.1.0
+fastapi~=0.115.12
+pydantic~=2.11.5
+SQLAlchemy~=2.0.41
+passlib~=1.7.4
+python-jose~=3.5.0
+deepl~=1.22.0
+bcrypt~=4.0.1
+pydantic~=2.11.5
+uvicorn~=0.34.3
