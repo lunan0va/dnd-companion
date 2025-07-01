@@ -27,7 +27,7 @@ def _normalize_spell_name(name: str) -> str:
 
 
 def fetch_spell_details_from_dnd_api(spell_index: str):
-    url = "https://www.dnd5eapi.co/api/spells/{spell_index}"
+    url = f"https://www.dnd5eapi.co/api/spells/{spell_index}"
     try:
         response = requests.get(url)
         response.raise_for_status()
