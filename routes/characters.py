@@ -124,7 +124,7 @@ def get_character(character_id: int, current_user: UserResponse = Depends(get_cu
 
     char_dict = character.__dict__.copy()
     char_dict["spells"] = [SpellForCharacterResponse.model_validate(cs.spell) for cs in character.character_spells]
-    char_dict["items"] = [ItemForCharacterResponse.model_validate(ci.item) for ci in char_orm.character_items]
+    char_dict["items"] = [ItemForCharacterResponse.model_validate(ci.item) for ci in character.character_items]
 
     for k in list(char_dict.keys()):
         if k.startswith("_sa_"):
