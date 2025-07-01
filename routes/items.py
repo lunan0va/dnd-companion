@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from database import get_db
 from models import Item
 from routes.users import get_current_user, UserResponse
 from utils.dnd_api_client import normalize_name, fetch_details_from_dnd_api, translate_text_with_deepl
+from utils.errors import raise_api_error
 
 router = APIRouter()
 
@@ -36,7 +37,11 @@ class ItemResponse(BaseModel):
 def get_all_items(db: Session = Depends(get_db)):
     items_from_db = db.query(Item).all()
     if not items_from_db:
-        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="No items found.")
+        raise_api_error(
+            204,
+            "NO_ITEMS_FOUND",
+            "No items found."
+        )
     return items_from_db
 
 
@@ -44,7 +49,11 @@ def get_all_items(db: Session = Depends(get_db)):
 def get_item(item_id: int, db: Session = Depends(get_db)):
     item = db.query(Item).filter(Item.id == item_id).first()
     if not item:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found.")
+        raise_api_error(
+            404,
+            "ITEM_NOT_FOUND",
+            "Item not found."
+        )
     return item
 
 
@@ -61,8 +70,11 @@ def create_item_from_api(request: ItemCreateRequest, current_user: UserResponse 
     api_data = fetch_details_from_dnd_api("equipment", item_name_en_normalized)
 
     if not api_data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Item '{request.name}' not found on D&D 5e API.")
+        raise_api_error(
+            404,
+            "ITEM_NOT_FOUND",
+            "Item not found on D&D 5e API."
+        )
 
     name_en = api_data.get("name")
     description_en = "\n".join(api_data.get("desc", []))
@@ -88,7 +100,11 @@ def create_item_from_api(request: ItemCreateRequest, current_user: UserResponse 
 def delete_item(item_id: int, current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
     item = db.query(Item).filter(Item.id == item_id).first()
     if not item:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found.")
+        raise_api_error(
+            404,
+            "ITEM_NOT_FOUND",
+            "Item not found."
+        )
 
     db.delete(item)
     db.commit()

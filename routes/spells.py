@@ -1,11 +1,7 @@
-import os
-import re
 from datetime import datetime
 from typing import List, Optional
 
-import requests
-import deepl
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -13,6 +9,7 @@ from database import get_db
 from models import Spell
 from routes.users import get_current_user, UserResponse
 from utils.dnd_api_client import normalize_name, fetch_details_from_dnd_api, translate_text_with_deepl
+from utils.errors import raise_api_error
 
 
 router = APIRouter()
@@ -46,7 +43,11 @@ class SpellResponse(BaseModel):
 def get_all_spells(db: Session = Depends(get_db)):
     spells_from_db = db.query(Spell).all()
     if not spells_from_db:
-        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="No spells found.")
+        raise_api_error(
+            204,
+            "NO_SPELLS_FOUND",
+            "No spells found."
+        )
     return spells_from_db
 
 
@@ -54,7 +55,11 @@ def get_all_spells(db: Session = Depends(get_db)):
 def get_spell(spell_id: int, db: Session = Depends(get_db)):
     spell = db.query(Spell).filter(Spell.id == spell_id).first()
     if not spell:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spell not found.")
+        raise_api_error(
+            404,
+            "SPELL_NOT_FOUND",
+            "Spell not found."
+        )
     return spell
 
 
@@ -71,8 +76,11 @@ def create_spell_from_api(request: SpellCreateRequest, current_user: UserRespons
     api_data = fetch_details_from_dnd_api("spells", spell_name_en_normalized)
 
     if not api_data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Spell '{request.name}' not found on D&D 5e API.")
+        raise_api_error(
+            404,
+            "SPELL_NOT_FOUND",
+            "Spell not found on D&D 5e API."
+        )
 
     name_en = api_data.get("name")
     description_en = "\n".join(api_data.get("desc", []))
@@ -109,7 +117,11 @@ def create_spell_from_api(request: SpellCreateRequest, current_user: UserRespons
 def delete_spell(spell_id: int, current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
     spell = db.query(Spell).filter(Spell.id == spell_id).first()
     if not spell:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spell not found.")
+        raise_api_error(
+            404,
+            "SPELL_NOT_FOUND",
+            "Spell not found."
+        )
 
     db.delete(spell)
     db.commit()

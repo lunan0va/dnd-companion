@@ -2,13 +2,14 @@ from datetime import datetime
 from typing import List, Optional
 
 import requests
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session, selectinload
 from pydantic import BaseModel
 
 from database import get_db
 from models import Character, User, Spell, CharacterSpell, Item, CharacterItem
 from routes.users import get_current_user, UserResponse
+from utils.errors import raise_api_error
 
 router = APIRouter()
 
@@ -32,9 +33,10 @@ def fetch_dnd_classes_from_api() -> List[str]:
         _DND_CLASSES_CACHE = classes
         return classes
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching classes from D&D API: {e}"
+        raise_api_error(
+            503,
+            "SERVICE_UNAVAILABLE",
+            f"Error fetching classes from D&D API: {e}"
         )
 
 
@@ -94,7 +96,11 @@ def get_all_characters(current_user: UserResponse = Depends(get_current_user), d
         Character.user_id == current_user.id).all()
 
     if not characters:
-        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="No characters found for this user.")
+        raise_api_error(
+            204,
+            "NO_CHARACTERS_FOUND",
+            "No characters found for this user."
+        )
 
     response_characters = []
     for char_orm in characters:
@@ -120,7 +126,11 @@ def get_character(character_id: int, current_user: UserResponse = Depends(get_cu
         (Character.id == character_id) & (Character.user_id == current_user.id)).first()
 
     if not character:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user.")
+        raise_api_error(
+            404,
+            "CHARACTER_NOT_FOUND",
+            "Character not found or not owned by user."
+        )
 
     char_dict = character.__dict__.copy()
     char_dict["spells"] = [SpellForCharacterResponse.model_validate(cs.spell) for cs in character.character_spells]
@@ -141,8 +151,11 @@ def create_character(char_create: CharacterCreate, current_user: UserResponse = 
     valid_classes = fetch_dnd_classes_from_api()
 
     if char_create.gameclass.lower() not in [cls.lower() for cls in valid_classes]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f"Invalid class name. Allowed classes are: {', '.join(valid_classes)}")
+        raise_api_error(
+            400,
+            "INVALID_CLASS_NAME",
+            "Invalid class name. Allowed classes are: " + ", ".join(valid_classes)
+        )
 
     new_character = Character(name=char_create.name, gameclass=char_create.gameclass, level=char_create.level,
                               user_id=current_user.id)
@@ -160,15 +173,22 @@ def update_character(character_id: int, char_update: CharacterUpdate,
         (Character.id == character_id) & (Character.user_id == current_user.id)).first()
 
     if not character:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user")
+        raise_api_error(
+            404,
+            "CHARACTER_NOT_FOUND",
+            "Character not found or not owned by user."
+        )
 
     update_data = char_update.model_dump(exclude_unset=True)
 
     if "gameclass" in update_data:
         valid_classes = fetch_dnd_classes_from_api()
         if update_data["gameclass"].lower() not in [cls.lower() for cls in valid_classes]:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail=f"Invalid class name. Allowed classes are: {', '.join(valid_classes)}")
+            raise_api_error(
+                400,
+                "INVALID_CLASS_NAME",
+                "Invalid class name. Allowed classes are: " + ", ".join(valid_classes)
+            )
 
     for key, value in update_data.items():
         setattr(character, key, value)
@@ -187,7 +207,11 @@ def delete_character(character_id: int, current_user: UserResponse = Depends(get
         (Character.id == character_id) & (Character.user_id == current_user.id)).first()
 
     if not character:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user")
+        raise_api_error(
+            404,
+            "CHARACTER_NOT_FOUND",
+            "Character not found or not owned by user."
+        )
 
     db.delete(character)
     db.commit()
@@ -202,17 +226,28 @@ def add_spell_to_character(character_id: int, spell_id: int, current_user: UserR
     character = db.query(Character).filter(
         (Character.id == character_id) & (Character.user_id == current_user.id)).first()
     if not character:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user.")
+        raise_api_error(
+            404,
+            "CHARACTER_NOT_FOUND",
+            "Character not found or not owned by user."
+        )
 
     spell = db.query(Spell).filter(Spell.id == spell_id).first()
     if not spell:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spell not found.")
+        raise_api_error(
+            404,
+            "SPELL_NOT_FOUND",
+            "Spell not found."
+        )
 
     existing_association = db.query(CharacterSpell).filter(
         (CharacterSpell.character_id == character_id) & (CharacterSpell.spell_id == spell_id)).first()
     if existing_association:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="Spell is already associated with this character.")
+        raise_api_error(
+            409,
+            "SPELL_ALREADY_ASSOCIATED",
+            "Spell is already associated with this character."
+        )
 
     character_spell = CharacterSpell(character_id=character_id, spell_id=spell_id)
     db.add(character_spell)
@@ -230,15 +265,22 @@ def remove_spell_from_character(character_id: int, spell_id: int,
         (Character.id == character_id) & (Character.user_id == current_user.id)
     ).first()
     if not character:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user.")
+        raise_api_error(
+            404,
+            "CHARACTER_NOT_FOUND",
+            "Character not found or not owned by user."
+        )
 
     association_to_delete = db.query(CharacterSpell).filter(
         (CharacterSpell.character_id == character_id) & (CharacterSpell.spell_id == spell_id)
     ).first()
 
     if not association_to_delete:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Spell is not associated with this character.")
+        raise_api_error(
+            404,
+            "SPELL_NOT_FOUND",
+            "Spell not found or not associated with this character."
+        )
 
     db.delete(association_to_delete)
     db.commit()
@@ -253,17 +295,28 @@ def add_item_to_character(character_id: int, item_id: int, current_user: UserRes
     character = db.query(Character).filter(
         (Character.id == character_id) & (Character.user_id == current_user.id)).first()
     if not character:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user.")
+        raise_api_error(
+            404,
+            "CHARACTER_NOT_FOUND",
+            "Character not found or not owned by user."
+        )
 
     item = db.query(Item).filter(Item.id == item_id).first()
     if not item:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found.")
+        raise_api_error(
+            404,
+            "ITEM_NOT_FOUND",
+            "Item not found."
+        )
 
     existing_association = db.query(CharacterItem).filter(
         (CharacterItem.character_id == character_id) & (CharacterItem.item_id == item_id)).first()
     if existing_association:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="Item is already associated with this character.")
+        raise_api_error(
+            409,
+            "ITEM_ALREADY_ASSOCIATED",
+            "Item is already associated with this character."
+        )
 
     character_item = CharacterItem(character_id=character_id, item_id=item_id)
     db.add(character_item)
@@ -280,15 +333,22 @@ def remove_item_from_character(character_id: int, item_id: int,
         (Character.id == character_id) & (Character.user_id == current_user.id)
     ).first()
     if not character:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found or not owned by user.")
+        raise_api_error(
+            404,
+            "CHARACTER_NOT_FOUND",
+            "Character not found or not owned by user."
+        )
 
     association_to_delete = db.query(CharacterItem).filter(
         (CharacterItem.character_id == character_id) & (CharacterItem.item_id == item_id)
     ).first()
 
     if not association_to_delete:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Item is not associated with this character.")
+        raise_api_error(
+            404,
+            "ITEM_NOT_FOUND",
+            "Item not found or not associated with this character."
+        )
 
     db.delete(association_to_delete)
     db.commit()

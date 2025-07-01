@@ -1,6 +1,6 @@
 import os
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from database import get_db
 from models import User
+from utils.errors import raise_api_error
 
 
 load_dotenv()
@@ -51,17 +52,28 @@ def decode_access_token(token: str):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"},)
+            raise_api_error(
+                401,
+                "INVALID_TOKEN",
+                "Could not validate credentials"
+            )
         return username
     except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"},)
-
+        raise_api_error(
+            401,
+            "INVALID_TOKEN",
+            "Could not validate credentials"
+        )
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     username = decode_access_token(token)
     user = db.query(User).filter(User.username == username).first()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"},)
+        raise_api_error(
+            401,
+            "INVALID_TOKEN",
+            "Could not validate credentials"
+        )
     return user
 
 @router.get("/users", response_model=list[UserResponse], summary="Retrieve all users")
@@ -73,7 +85,11 @@ def get_users(db: Session = Depends(get_db)):
 def register_user(user_data: UserRegister, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.username == user_data.username).first()
     if existing_user:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,detail="Username already registered")
+        raise_api_error(
+            409,
+            "USERNAME_ALREADY_EXISTS",
+            "Username already exists"
+        )
 
     hashed_password = bcrypt.hash(user_data.password)
 
@@ -90,10 +106,18 @@ def register_user(user_data: UserRegister, db: Session = Depends(get_db)):
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+        raise_api_error(
+            401,
+            "INVALID_CREDENTIALS",
+            "Invalid username or password"
+        )
 
     if not bcrypt.verify(form_data.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+        raise_api_error(
+            401,
+            "INVALID_CREDENTIALS",
+            "Invalid username or password"
+        )
 
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
