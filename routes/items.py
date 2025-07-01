@@ -58,7 +58,7 @@ def create_item_from_api(request: ItemCreateRequest, current_user: UserResponse 
     if existing_item:
         return existing_item
 
-    api_data = fetch_details_from_dnd_api("equiment", item_name_en_normalized)
+    api_data = fetch_details_from_dnd_api("equipment", item_name_en_normalized)
 
     if not api_data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
