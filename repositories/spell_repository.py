@@ -1,16 +1,26 @@
-from typing import Optional
-from sqlalchemy.orm import Session
-from models.db_models import Spell
-from .base import BaseRepository
+"""
+Dieses Modul enthält das Repository für alle datenbankspezifischen Operationen,
+die sich auf die Spell-Entität beziehen.
+"""
+from pydantic import BaseModel
 
-class SpellRepository(BaseRepository[Spell]):
-    def get_by_dnd_api_id(self, db: Session, *, dnd_api_id: str) -> Optional[Spell]:
-        return db.query(self.model).filter(self.model.dnd_api_id == dnd_api_id).first()
+from models import Spell
+from models.schemas import SpellCreateRequest
+# KORREKTUR: Von der neuen, spezialisierten Basisklasse erben
+from .dnd_api_repository import DndApiObjectRepository
 
-    def create_from_model(self, db: Session, *, db_obj: Spell) -> Spell:
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
 
-spell_repo = SpellRepository(Spell)
+class SpellRepository(DndApiObjectRepository[Spell, SpellCreateRequest, BaseModel]):
+    """
+    Repository für den Datenzugriff auf Spell-Objekte.
+
+    Erbt von DndApiObjectRepository, um die Logik für API-basierte Objekte
+    wiederzuverwenden.
+    """
+
+    def __init__(self):
+        """Initialisiert das Repository mit dem Spell-Modell."""
+        super().__init__(model=Spell)
+
+
+spell_repo = SpellRepository()

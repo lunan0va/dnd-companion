@@ -1,16 +1,25 @@
-from typing import Optional
-from sqlalchemy.orm import Session
-from models.db_models import Item
-from .base import BaseRepository
+"""
+Dieses Modul enthält das Repository für alle datenbankspezifischen Operationen,
+die sich auf die Item-Entität beziehen.
+"""
+from pydantic import BaseModel
 
-class ItemRepository(BaseRepository[Item]):
-    def get_by_dnd_api_id(self, db: Session, *, dnd_api_id: str) -> Optional[Item]:
-        return db.query(self.model).filter(self.model.dnd_api_id == dnd_api_id).first()
+from models import Item
+from models.schemas import ItemCreateRequest
+from .dnd_api_repository import DndApiObjectRepository
 
-    def create_from_model(self, db: Session, *, db_obj: Item) -> Item:
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
 
-item_repo = ItemRepository(Item)
+class ItemRepository(DndApiObjectRepository[Item, ItemCreateRequest, BaseModel]):
+    """
+    Repository für den Datenzugriff auf Item-Objekte.
+
+    Erbt von DndApiObjectRepository, um die Logik für API-basierte Objekte
+    wiederzuverwenden.
+    """
+
+    def __init__(self):
+        """Initialisiert das Repository mit dem Item-Modell."""
+        super().__init__(model=Item)
+
+
+item_repo = ItemRepository()

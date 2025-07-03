@@ -1,3 +1,11 @@
+# pylint: disable=too-few-public-methods
+"""
+Definiert die SQLAlchemy ORM-Modelle für die D&D Companion-Anwendung.
+
+Dieses Modul enthält das Datenbankschema für alle primären Entitäten,
+einschließlich Benutzer, Charaktere, Items und Zauber, sowie die
+Assoziationstabellen für deren Many-to-Many-Beziehungen.
+"""
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint
 )
@@ -8,18 +16,20 @@ Base = declarative_base()
 
 
 class User(Base):
+    """Repräsentiert einen authentifizierten Benutzer der Anwendung."""
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now, onupdate=func.now)
 
     characters = relationship("Character", back_populates="owner")
 
 
 class Character(Base):
+    """Repräsentiert einen von einem Spieler erstellten Charakter."""
     __tablename__ = "characters"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -27,15 +37,23 @@ class Character(Base):
     gameclass = Column(String)
     level = Column(Integer, default=1)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now, onupdate=func.now)
 
     owner = relationship("User", back_populates="characters")
-    items = relationship("CharacterItem", back_populates="character", cascade="all, delete-orphan")
-    spells = relationship("CharacterSpell", back_populates="character", cascade="all, delete-orphan")
+    items = relationship(
+        "CharacterItem", back_populates="character", cascade="all, delete-orphan"
+    )
+    spells = relationship(
+        "CharacterSpell", back_populates="character", cascade="all, delete-orphan"
+    )
 
 
 class Item(Base):
+    """
+    Repräsentiert ein generisches Item, das aus der externen D&D-API
+    zwischengespeichert wird.
+    """
     __tablename__ = "items"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -44,13 +62,17 @@ class Item(Base):
     name_de = Column(String, nullable=False)
     description_en = Column(Text)
     description_de = Column(Text)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now, onupdate=func.now)
 
     character_items = relationship("CharacterItem", back_populates="item")
 
 
 class Spell(Base):
+    """
+    Repräsentiert einen generischen Zauber, der aus der externen D&D-API
+    zwischengespeichert wird.
+    """
     __tablename__ = "spells"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -65,13 +87,14 @@ class Spell(Base):
     components = Column(String)
     duration = Column(String)
     school = Column(String)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now, onupdate=func.now)
 
     character_spells = relationship("CharacterSpell", back_populates="spell")
 
 
 class CharacterItem(Base):
+    """Assoziationstabelle, die Charaktere mit ihren Items verbindet."""
     __tablename__ = "character_items"
 
     character_id = Column(Integer, ForeignKey("characters.id"), primary_key=True)
@@ -82,6 +105,7 @@ class CharacterItem(Base):
 
 
 class CharacterSpell(Base):
+    """Assoziationstabelle, die Charaktere mit ihren Zaubern verbindet."""
     __tablename__ = "character_spells"
 
     character_id = Column(Integer, ForeignKey("characters.id"), primary_key=True)

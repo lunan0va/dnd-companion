@@ -1,3 +1,11 @@
+# pylint: disable=too-few-public-methods
+"""
+Definiert die Pydantic-Schemas für die API-Datenvalidierung und Serialisierung.
+
+Dieses Modul enthält alle Modelle, die für die Ein- und Ausgabe von API-Endpunkten
+verwendet werden. Sie stellen sicher, dass die an die API gesendeten Daten korrekt
+strukturiert sind und definieren das Format der JSON-Antworten.
+"""
 from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, field_validator
@@ -11,7 +19,14 @@ class BaseConfig(BaseModel):
     """Eine Basis-Konfigurationsklasse, um Wiederholungen zu vermeiden."""
 
     class Config:
-        from_attributes = True  # Erlaubt das Erstellen von Schemas aus ORM-Objekten
+        """
+        Konfigurationsoptionen für Pydantic-Modelle.
+
+        Attributes:
+            from_attributes (bool): Erlaubt das Erstellen von Pydantic-Schemas
+                                  direkt aus SQLAlchemy ORM-Objekten.
+        """
+        from_attributes = True
 
 
 # Schemas für User & Authentication
@@ -127,6 +142,13 @@ class CharacterResponse(BaseConfig):
     @field_validator('spells', mode='before')
     @classmethod
     def transform_spells(cls, v):
+        """
+        Transformiert die Assoziationsobjekte (CharacterSpell) in Spell-Objekte.
+
+        Pydantic ruft diesen Validator auf, bevor die Daten dem Feld zugewiesen
+        werden. Er extrahiert das eigentliche `spell`-Objekt aus der
+        `CharacterSpell`-Verknüpfung für eine saubere API-Antwort.
+        """
         if isinstance(v, list) and all(isinstance(i, CharacterSpell) for i in v):
             return [cs.spell for cs in v]
         return v
@@ -134,6 +156,13 @@ class CharacterResponse(BaseConfig):
     @field_validator('items', mode='before')
     @classmethod
     def transform_items(cls, v):
+        """
+        Transformiert die Assoziationsobjekte (CharacterItem) in Item-Objekte.
+
+        Ähnlich wie `transform_spells`, extrahiert dieser Validator das
+        `item`-Objekt aus der `CharacterItem`-Verknüpfung für eine saubere
+        API-Antwort.
+        """
         if isinstance(v, list) and all(isinstance(i, CharacterItem) for i in v):
             return [ci.item for ci in v]
         return v
