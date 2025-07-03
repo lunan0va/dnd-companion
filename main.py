@@ -3,7 +3,11 @@ from fastapi import FastAPI
 from database import create_db_tables, drop_db_tables
 from routes import users, characters, spells, items
 
-app = FastAPI()
+app = FastAPI(
+    title="D&D Companion API",
+    description="Eine API zur Verwaltung von Dungeons & Dragons Charakteren, Zaubern und Gegenständen.",
+    version="0.0.1"
+)
 
 @app.on_event("startup")
 def on_startup():

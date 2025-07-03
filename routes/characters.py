@@ -1,211 +1,71 @@
-from datetime import datetime
-from typing import List, Optional
-
-import requests
+from typing import List
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session, selectinload
-from pydantic import BaseModel, field_validator
+from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Character, User, Spell, CharacterSpell, Item, CharacterItem
-from routes.users import get_current_user, UserResponse
 from utils.errors import raise_api_error
+from utils.dnd_api_client import fetch_dnd_classes_from_api
+
+from models.schemas import CharacterCreate, CharacterUpdate, CharacterResponse
+
+from repositories import character_repo, spell_repo, item_repo
+
+from .users import get_current_user, UserResponse
 
 router = APIRouter()
-
-_DND_CLASSES_CACHE: Optional[List[str]] = None
-
-
-def fetch_dnd_classes_from_api() -> List[str]:
-    global _DND_CLASSES_CACHE
-
-    if _DND_CLASSES_CACHE is not None:
-        return _DND_CLASSES_CACHE
-
-    url = "https://www.dnd5eapi.co/api/classes"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-
-        classes = [item["name"] for item in data.get("results", [])]
-
-        _DND_CLASSES_CACHE = classes
-        return classes
-    except Exception as e:
-        raise_api_error(
-            503,
-            "SERVICE_UNAVAILABLE",
-            f"Error fetching classes from D&D API: {e}"
-        )
-
-
-class CharacterCreate(BaseModel):
-    name: str
-    gameclass: str
-    level: int = 1
-
-
-class CharacterUpdate(BaseModel):
-    name: Optional[str] = None
-    gameclass: Optional[str] = None
-    level: Optional[int] = None
-
-
-class SpellForCharacterResponse(BaseModel):
-    name_de: str
-    description_de: Optional[str] = None
-    level: Optional[int] = None
-    casting_time: Optional[str] = None
-    range: Optional[str] = None
-    components: Optional[str] = None
-    duration: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
-
-class ItemForCharacterResponse(BaseModel):
-    name_de: str
-    description_de: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
-
-class CharacterResponse(BaseModel):
-    id: int
-    name: str
-    gameclass: str
-    level: int
-    user_id: int
-    created_at: datetime
-    updated_at: datetime
-    spells: List[SpellForCharacterResponse] = []
-    items: List[ItemForCharacterResponse] = []
-
-    @field_validator('spells', mode='before')
-    @classmethod
-    def transform_spells(cls, v):
-        if isinstance(v, list) and all(isinstance(i, CharacterSpell) for i in v):
-            return [cs.spell for cs in v]
-        return v
-
-    @field_validator('items', mode='before')
-    @classmethod
-    def transform_items(cls, v):
-        if isinstance(v, list) and all(isinstance(i, CharacterItem) for i in v):
-            return [ci.item for ci in v]
-        return v
-
-    class Config:
-        from_attributes = True
 
 
 @router.get("/characters", response_model=List[CharacterResponse],
             summary="Retrieve all characters for the current user")
 def get_all_characters(current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
-    characters = db.query(Character).options(
-        selectinload(Character.spells).joinedload(CharacterSpell.spell),
-        selectinload(Character.items).joinedload(CharacterItem.item)
-    ).filter(Character.user_id == current_user.id).all()
-
-    return characters
+    return character_repo.get_all_for_user(db=db, user_id=current_user.id)
 
 
 @router.get("/characters/{character_id}", response_model=CharacterResponse, summary="Retrieve a single character by ID")
 def get_character(character_id: int, current_user: UserResponse = Depends(get_current_user),
                   db: Session = Depends(get_db)):
-    character = db.query(Character).options(
-        selectinload(Character.spells).joinedload(CharacterSpell.spell),
-        selectinload(Character.items).joinedload(CharacterItem.item)
-    ).filter(
-        (Character.id == character_id) & (Character.user_id == current_user.id)
-    ).first()
-
+    character = character_repo.get_by_id_and_user(db=db, character_id=character_id, user_id=current_user.id)
     if not character:
-        raise_api_error(
-            404,
-            "CHARACTER_NOT_FOUND",
-            "Character not found or not owned by user."
-        )
-
+        raise_api_error(404, "CHARACTER_NOT_FOUND", "Character not found or not owned by user.")
     return character
 
 
 @router.post("/characters", response_model=CharacterResponse, status_code=status.HTTP_201_CREATED,
-             summary="Create a new character"
-             )
+             summary="Create a new character")
 def create_character(char_create: CharacterCreate, current_user: UserResponse = Depends(get_current_user),
                      db: Session = Depends(get_db)):
     valid_classes = fetch_dnd_classes_from_api()
-
     if char_create.gameclass.lower() not in [cls.lower() for cls in valid_classes]:
-        raise_api_error(
-            400,
-            "INVALID_CLASS_NAME",
-            "Invalid class name. Allowed classes are: " + ", ".join(valid_classes)
-        )
+        raise_api_error(400, "INVALID_CLASS_NAME",
+                        "Invalid class name. Allowed classes are: " + ", ".join(valid_classes))
 
-    new_character = Character(name=char_create.name, gameclass=char_create.gameclass, level=char_create.level,
-                              user_id=current_user.id)
-    db.add(new_character)
-    db.commit()
-    db.refresh(new_character)
-
-    return new_character
+    return character_repo.create_for_user(db=db, obj_in=char_create, user_id=current_user.id)
 
 
 @router.put("/characters/{character_id}", response_model=CharacterResponse, summary="Update an existing character")
 def update_character(character_id: int, char_update: CharacterUpdate,
                      current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
-    character = db.query(Character).filter(
-        (Character.id == character_id) & (Character.user_id == current_user.id)).first()
-
+    character = character_repo.get_by_id_and_user(db=db, character_id=character_id, user_id=current_user.id)
     if not character:
-        raise_api_error(
-            404,
-            "CHARACTER_NOT_FOUND",
-            "Character not found or not owned by user."
-        )
+        raise_api_error(404, "CHARACTER_NOT_FOUND", "Character not found or not owned by user.")
 
     update_data = char_update.model_dump(exclude_unset=True)
-
     if "gameclass" in update_data:
         valid_classes = fetch_dnd_classes_from_api()
         if update_data["gameclass"].lower() not in [cls.lower() for cls in valid_classes]:
-            raise_api_error(
-                400,
-                "INVALID_CLASS_NAME",
-                "Invalid class name. Allowed classes are: " + ", ".join(valid_classes)
-            )
+            raise_api_error(400, "INVALID_CLASS_NAME", "Invalid class name.")
 
-    for key, value in update_data.items():
-        setattr(character, key, value)
-
-    db.add(character)
-    db.commit()
-    db.refresh(character)
-
-    return character
+    return character_repo.update(db=db, db_obj=character, obj_in=char_update)
 
 
 @router.delete("/characters/{character_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a character")
 def delete_character(character_id: int, current_user: UserResponse = Depends(get_current_user),
                      db: Session = Depends(get_db)):
-    character = db.query(Character).filter(
-        (Character.id == character_id) & (Character.user_id == current_user.id)).first()
-
+    character = character_repo.get_by_id_and_user(db=db, character_id=character_id, user_id=current_user.id)
     if not character:
-        raise_api_error(
-            404,
-            "CHARACTER_NOT_FOUND",
-            "Character not found or not owned by user."
-        )
+        raise_api_error(404, "CHARACTER_NOT_FOUND", "Character not found or not owned by user.")
 
-    db.delete(character)
-    db.commit()
-
+    character_repo.delete(db=db, db_obj=character)
     return
 
 
@@ -213,37 +73,18 @@ def delete_character(character_id: int, current_user: UserResponse = Depends(get
              summary="Add a spell to a character")
 def add_spell_to_character(character_id: int, spell_id: int, current_user: UserResponse = Depends(get_current_user),
                            db: Session = Depends(get_db)):
-    character = db.query(Character).filter(
-        (Character.id == character_id) & (Character.user_id == current_user.id)).first()
+    character = character_repo.get_by_id_and_user(db=db, character_id=character_id, user_id=current_user.id)
     if not character:
-        raise_api_error(
-            404,
-            "CHARACTER_NOT_FOUND",
-            "Character not found or not owned by user."
-        )
+        raise_api_error(404, "CHARACTER_NOT_FOUND", "Character not found or not owned by user.")
 
-    spell = db.query(Spell).filter(Spell.id == spell_id).first()
+    spell = spell_repo.get(db, id=spell_id)
     if not spell:
-        raise_api_error(
-            404,
-            "SPELL_NOT_FOUND",
-            "Spell not found."
-        )
+        raise_api_error(404, "SPELL_NOT_FOUND", "Spell not found.")
 
-    existing_association = db.query(CharacterSpell).filter(
-        (CharacterSpell.character_id == character_id) & (CharacterSpell.spell_id == spell_id)).first()
-    if existing_association:
-        raise_api_error(
-            409,
-            "SPELL_ALREADY_ASSOCIATED",
-            "Spell is already associated with this character."
-        )
+    if character_repo.get_spell_association(db, character_id=character_id, spell_id=spell_id):
+        raise_api_error(409, "SPELL_ALREADY_ASSOCIATED", "Spell is already associated with this character.")
 
-    character_spell = CharacterSpell(character_id=character_id, spell_id=spell_id)
-    db.add(character_spell)
-    db.commit()
-    db.refresh(character_spell)
-
+    character_repo.add_spell_to_character(db=db, character=character, spell_id=spell_id)
     return {"message": f"Spell '{spell.name_en}' added to character '{character.name}' successfully."}
 
 
@@ -251,30 +92,15 @@ def add_spell_to_character(character_id: int, spell_id: int, current_user: UserR
                summary="Remove a spell from a character")
 def remove_spell_from_character(character_id: int, spell_id: int,
                                 current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
-    character = db.query(Character).filter(
-        (Character.id == character_id) & (Character.user_id == current_user.id)
-    ).first()
+    character = character_repo.get_by_id_and_user(db=db, character_id=character_id, user_id=current_user.id)
     if not character:
-        raise_api_error(
-            404,
-            "CHARACTER_NOT_FOUND",
-            "Character not found or not owned by user."
-        )
+        raise_api_error(404, "CHARACTER_NOT_FOUND", "Character not found or not owned by user.")
 
-    association_to_delete = db.query(CharacterSpell).filter(
-        (CharacterSpell.character_id == character_id) & (CharacterSpell.spell_id == spell_id)
-    ).first()
+    association = character_repo.get_spell_association(db, character_id=character_id, spell_id=spell_id)
+    if not association:
+        raise_api_error(404, "SPELL_NOT_FOUND", "Spell not found or not associated with this character.")
 
-    if not association_to_delete:
-        raise_api_error(
-            404,
-            "SPELL_NOT_FOUND",
-            "Spell not found or not associated with this character."
-        )
-
-    db.delete(association_to_delete)
-    db.commit()
-
+    character_repo.remove_spell_from_character(db=db, association=association)
     return
 
 
@@ -282,36 +108,18 @@ def remove_spell_from_character(character_id: int, spell_id: int,
              summary="Add an item to a character")
 def add_item_to_character(character_id: int, item_id: int, current_user: UserResponse = Depends(get_current_user),
                           db: Session = Depends(get_db)):
-    character = db.query(Character).filter(
-        (Character.id == character_id) & (Character.user_id == current_user.id)).first()
+    character = character_repo.get_by_id_and_user(db=db, character_id=character_id, user_id=current_user.id)
     if not character:
-        raise_api_error(
-            404,
-            "CHARACTER_NOT_FOUND",
-            "Character not found or not owned by user."
-        )
+        raise_api_error(404, "CHARACTER_NOT_FOUND", "Character not found or not owned by user.")
 
-    item = db.query(Item).filter(Item.id == item_id).first()
+    item = item_repo.get(db, id=item_id)
     if not item:
-        raise_api_error(
-            404,
-            "ITEM_NOT_FOUND",
-            "Item not found."
-        )
+        raise_api_error(404, "ITEM_NOT_FOUND", "Item not found.")
 
-    existing_association = db.query(CharacterItem).filter(
-        (CharacterItem.character_id == character_id) & (CharacterItem.item_id == item_id)).first()
-    if existing_association:
-        raise_api_error(
-            409,
-            "ITEM_ALREADY_ASSOCIATED",
-            "Item is already associated with this character."
-        )
+    if character_repo.get_item_association(db, character_id=character_id, item_id=item_id):
+        raise_api_error(409, "ITEM_ALREADY_ASSOCIATED", "Item is already associated with this character.")
 
-    character_item = CharacterItem(character_id=character_id, item_id=item_id)
-    db.add(character_item)
-    db.commit()
-
+    character_repo.add_item_to_character(db=db, character=character, item_id=item_id)
     return {"message": f"Item '{item.name_en}' added to character '{character.name}' successfully."}
 
 
@@ -319,28 +127,13 @@ def add_item_to_character(character_id: int, item_id: int, current_user: UserRes
                summary="Remove an item from a character")
 def remove_item_from_character(character_id: int, item_id: int,
                                current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
-    character = db.query(Character).filter(
-        (Character.id == character_id) & (Character.user_id == current_user.id)
-    ).first()
+    character = character_repo.get_by_id_and_user(db=db, character_id=character_id, user_id=current_user.id)
     if not character:
-        raise_api_error(
-            404,
-            "CHARACTER_NOT_FOUND",
-            "Character not found or not owned by user."
-        )
+        raise_api_error(404, "CHARACTER_NOT_FOUND", "Character not found or not owned by user.")
 
-    association_to_delete = db.query(CharacterItem).filter(
-        (CharacterItem.character_id == character_id) & (CharacterItem.item_id == item_id)
-    ).first()
+    association = character_repo.get_item_association(db, character_id=character_id, item_id=item_id)
+    if not association:
+        raise_api_error(404, "ITEM_NOT_FOUND", "Item not found or not associated with this character.")
 
-    if not association_to_delete:
-        raise_api_error(
-            404,
-            "ITEM_NOT_FOUND",
-            "Item not found or not associated with this character."
-        )
-
-    db.delete(association_to_delete)
-    db.commit()
-
+    character_repo.remove_item_from_character(db=db, association=association)
     return

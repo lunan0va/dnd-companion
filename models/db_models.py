@@ -1,8 +1,11 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import (
+    Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint
+)
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.sql import func
 
 Base = declarative_base()
+
 
 class User(Base):
     __tablename__ = "users"
@@ -58,7 +61,7 @@ class Spell(Base):
     description_de = Column(Text)
     level = Column(Integer)
     casting_time = Column(String)
-    range = Column(String)
+    spell_range = Column("range", String)
     components = Column(String)
     duration = Column(String)
     school = Column(String)
