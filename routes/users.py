@@ -51,11 +51,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 CurrentUser = Annotated[UserResponse, Depends(get_current_user)]
 
 
-@router.get("/users", response_model=list[UserResponse], summary="Retrieve all users")
-def get_users(db: Session = Depends(get_db)):
-    # Verwende das Repository
-    return user_repo.get_all(db=db)
-
 @router.post("/register", response_model=Token, summary="Register a new user and get an access token")
 def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
     existing_user = user_repo.get_by_username(db=db, username=user_data.username)
