@@ -2,7 +2,7 @@
 Hilfsfunktionen für die API-Routen, um Code-Duplizierung zu vermeiden.
 """
 from typing import Type, Callable, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 from models import Base
 from repositories.dnd_api_repository import DndApiObjectRepository
@@ -28,9 +28,7 @@ class APIObjectConfig(BaseModel):
     api_endpoint: str
     extra_fields_factory: Optional[Callable[[dict], dict]] = None
 
-    class Config:
-        """Erlaubt komplexe Typen wie 'repo' und 'model_class' in einem Pydantic-Modell"""
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 def get_or_create_api_object(

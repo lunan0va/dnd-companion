@@ -7,7 +7,7 @@ das Einloggen (Erstellen von JWTs) und das Abrufen von Benutzerinformationen.
 import os
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from passlib.hash import bcrypt
@@ -61,13 +61,11 @@ def decode_access_token(token: str) -> str:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
-            # KORREKTUR: Fehlermeldung auf Deutsch
             raise_api_error(
                 401, "INVALID_TOKEN", "Anmeldeinformationen konnten nicht validiert werden."
             )
         return username
     except JWTError:
-        # KORREKTUR: Fehlermeldung auf Deutsch
         raise_api_error(
             401, "INVALID_TOKEN", "Anmeldeinformationen konnten nicht validiert werden."
         )
@@ -92,7 +90,6 @@ def get_current_user(token: TokenDep, db: DbSession) -> UserResponse:
     username = decode_access_token(token)
     user = user_repo.get_by_username(db=db, username=username)
     if user is None:
-        # KORREKTUR: Fehlermeldung auf Deutsch
         raise_api_error(
             401, "INVALID_TOKEN", "Anmeldeinformationen konnten nicht validiert werden."
         )
@@ -105,6 +102,7 @@ CurrentUser = Annotated[UserResponse, Depends(get_current_user)]
 @router.post(
     "/register",
     response_model=Token,
+    status_code=status.HTTP_201_CREATED,
     summary="Einen neuen Benutzer registrieren und einen Access Token erhalten",
 )
 def register_user(user_data: UserCreate, db: DbSession):
@@ -116,7 +114,6 @@ def register_user(user_data: UserCreate, db: DbSession):
     """
     existing_user = user_repo.get_by_username(db=db, username=user_data.username)
     if existing_user:
-        # KORREKTUR: Fehlermeldung auf Deutsch
         raise_api_error(409, "USERNAME_ALREADY_EXISTS", "Benutzername existiert bereits.")
 
     new_user = user_repo.create(db=db, obj_in=user_data)
@@ -136,7 +133,6 @@ def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: DbSess
     """
     user = user_repo.get_by_username(db=db, username=form_data.username)
     if not user or not bcrypt.verify(form_data.password, user.password_hash):
-        # KORREKTUR: Fehlermeldung auf Deutsch
         raise_api_error(401, "INVALID_CREDENTIALS", "Ungültiger Benutzername oder Passwort.")
 
     access_token = create_access_token(data={"sub": user.username})

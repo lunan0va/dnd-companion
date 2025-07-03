@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, status, Response
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Character
+from models import Character, Spell, Item
 from models.schemas import (
     CharacterCreate,
     CharacterUpdate,
@@ -23,6 +23,21 @@ from utils.errors import raise_api_error
 from .users import get_current_user
 
 router = APIRouter()
+
+def get_spell_dependency(spell_id: int, db: Session = Depends(get_db)) -> Spell:
+    """Dependency, die einen Zauber anhand der ID abruft."""
+    spell = spell_repo.get(db, obj_id=spell_id)
+    if not spell:
+        raise_api_error(404, "SPELL_NOT_FOUND", "Zauber nicht gefunden.")
+    return spell
+
+
+def get_item_dependency(item_id: int, db: Session = Depends(get_db)) -> Item:
+    """Dependency, die ein Item anhand der ID abruft."""
+    item = item_repo.get(db, obj_id=item_id)
+    if not item:
+        raise_api_error(404, "ITEM_NOT_FOUND", "Item nicht gefunden.")
+    return item
 
 
 def validate_game_class(gameclass: str):
@@ -127,7 +142,7 @@ def delete_character(
     db: Session = Depends(get_db),
 ):
     """Löscht einen Charakter anhand seiner ID."""
-    character_repo.delete(db=db, obj_id=character.id)
+    character_repo.delete(db=db, db_obj=character)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -138,24 +153,18 @@ def delete_character(
     summary="Einem Charakter einen Zauber hinzufügen",
 )
 def add_spell_to_character(
-    spell_id: int,
     character: Character = Depends(get_character_for_user),
+    spell: Spell = Depends(get_spell_dependency),
     db: Session = Depends(get_db),
 ):
-    """Fügt einem Charakter einen existierenden Zauber hinzu."""
-    spell = spell_repo.get(db, obj_id=spell_id)
-    if not spell:
-        raise_api_error(404, "SPELL_NOT_FOUND", "Zauber nicht gefunden.")
+    """Fügt einen Zauber zur Zauberliste eines Charakters hinzu."""
+    if spell in [cs.spell for cs in character.spells]:
+        raise_api_error(409, "SPELL_ALREADY_EXISTS", "Zauber ist bereits mit dem Charakter verbunden.")
 
-    if character_repo.get_spell_association(
-        db, character_id=character.id, spell_id=spell_id
-    ):
-        raise_api_error(
-            409, "SPELL_ALREADY_ASSOCIATED", "Zauber ist bereits mit diesem Charakter verbunden."
-        )
+    character_repo.add_spell_to_character(db=db, character=character, spell_id=spell.id)
 
-    character_repo.add_spell_to_character(db=db, character=character, spell_id=spell_id)
-    return get_character_for_user(character.id, db=db, current_user=None)
+    db.refresh(character)
+    return character
 
 
 @router.delete(
@@ -188,24 +197,18 @@ def remove_spell_from_character(
     summary="Einem Charakter ein Item hinzufügen",
 )
 def add_item_to_character(
-    item_id: int,
     character: Character = Depends(get_character_for_user),
+    item: Item = Depends(get_item_dependency),
     db: Session = Depends(get_db),
 ):
-    """Fügt einem Charakter ein existierendes Item hinzu."""
-    item = item_repo.get(db, obj_id=item_id)
-    if not item:
-        raise_api_error(404, "ITEM_NOT_FOUND", "Item nicht gefunden.")
+    """Fügt ein Item zum Inventar eines Charakters hinzu."""
+    if item in [ci.item for ci in character.items]:
+        raise_api_error(409, "ITEM_ALREADY_EXISTS", "Item ist bereits mit dem Charakter verbunden.")
 
-    if character_repo.get_item_association(
-        db, character_id=character.id, item_id=item_id
-    ):
-        raise_api_error(
-            409, "ITEM_ALREADY_ASSOCIATED", "Item ist bereits mit diesem Charakter verbunden."
-        )
+    character_repo.add_item_to_character(db=db, character=character, item_id=item.id)
 
-    character_repo.add_item_to_character(db=db, character=character, item_id=item_id)
-    return get_character_for_user(character.id, db=db, current_user=None)
+    db.refresh(character)
+    return character
 
 
 @router.delete(

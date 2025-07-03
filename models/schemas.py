@@ -8,25 +8,9 @@ strukturiert sind und definieren das Format der JSON-Antworten.
 """
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, ConfigDict
 
 from .db_models import CharacterSpell, CharacterItem
-
-
-# Basis-Konfiguration
-
-class BaseConfig(BaseModel):
-    """Eine Basis-Konfigurationsklasse, um Wiederholungen zu vermeiden."""
-
-    class Config:
-        """
-        Konfigurationsoptionen für Pydantic-Modelle.
-
-        Attributes:
-            from_attributes (bool): Erlaubt das Erstellen von Pydantic-Schemas
-                                  direkt aus SQLAlchemy ORM-Objekten.
-        """
-        from_attributes = True
 
 
 # Schemas für User & Authentication
@@ -37,8 +21,10 @@ class UserCreate(BaseModel):
     password: str
 
 
-class UserResponse(BaseConfig):
+class UserResponse(BaseModel):
     """Schema für die Antwort bei Benutzer-Abfragen (ohne Passwort)."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     username: str
     created_at: datetime
@@ -57,8 +43,10 @@ class ItemCreateRequest(BaseModel):
     name: str
 
 
-class ItemResponse(BaseConfig):
+class ItemResponse(BaseModel):
     """Schema für die vollständige Antwort eines Items."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     dnd_api_id: str
     name_en: str
@@ -76,8 +64,10 @@ class SpellCreateRequest(BaseModel):
     name: str
 
 
-class SpellResponse(BaseConfig):
+class SpellResponse(BaseModel):
     """Schema für die vollständige Antwort eines Zaubers."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     dnd_api_id: str
     name_en: str
@@ -110,8 +100,10 @@ class CharacterUpdate(BaseModel):
     level: Optional[int] = None
 
 
-class SpellForCharacterResponse(BaseConfig):
+class SpellForCharacterResponse(BaseModel):
     """Ein abgespecktes Zauber-Schema, nur für die Anzeige in einer Charakter-Antwort."""
+    model_config = ConfigDict(from_attributes=True)
+
     name_de: str
     description_de: Optional[str] = None
     level: Optional[int] = None
@@ -121,14 +113,18 @@ class SpellForCharacterResponse(BaseConfig):
     duration: Optional[str] = None
 
 
-class ItemForCharacterResponse(BaseConfig):
+class ItemForCharacterResponse(BaseModel):
     """Ein abgespecktes Item-Schema, nur für die Anzeige in einer Charakter-Antwort."""
+    model_config = ConfigDict(from_attributes=True)
+
     name_de: str
     description_de: Optional[str] = None
 
 
-class CharacterResponse(BaseConfig):
+class CharacterResponse(BaseModel):
     """Das vollständige Antwort-Schema für einen Charakter, inkl. seiner Items und Spells."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     gameclass: str
@@ -144,10 +140,6 @@ class CharacterResponse(BaseConfig):
     def transform_spells(cls, v):
         """
         Transformiert die Assoziationsobjekte (CharacterSpell) in Spell-Objekte.
-
-        Pydantic ruft diesen Validator auf, bevor die Daten dem Feld zugewiesen
-        werden. Er extrahiert das eigentliche `spell`-Objekt aus der
-        `CharacterSpell`-Verknüpfung für eine saubere API-Antwort.
         """
         if isinstance(v, list) and all(isinstance(i, CharacterSpell) for i in v):
             return [cs.spell for cs in v]
@@ -158,10 +150,6 @@ class CharacterResponse(BaseConfig):
     def transform_items(cls, v):
         """
         Transformiert die Assoziationsobjekte (CharacterItem) in Item-Objekte.
-
-        Ähnlich wie `transform_spells`, extrahiert dieser Validator das
-        `item`-Objekt aus der `CharacterItem`-Verknüpfung für eine saubere
-        API-Antwort.
         """
         if isinstance(v, list) and all(isinstance(i, CharacterItem) for i in v):
             return [ci.item for ci in v]

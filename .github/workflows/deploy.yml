@@ -1,16 +1,41 @@
+name: Test and Deploy
+
 on:
   push:
     branches:
       - main
 
 jobs:
-  deploy:
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest "pytest-cov[toml]" pytest-mock
+
+      - name: Run pytest
+        env:
+          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+        run: pytest
+
+  deploy:
+    needs: test
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Deploy to Server
         uses: appleboy/ssh-action@master
         with:

@@ -31,18 +31,11 @@ class BaseRepository(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         """
         self.model = model
 
-    def get(self, db: Session, obj_id: Any) -> Optional[ModelT]:
+    def get(self, db: Session, obj_id: int) -> Optional[ModelT]:
         """
-        Ruft ein einzelnes Objekt anhand seiner ID aus der Datenbank ab.
-
-        Args:
-            db: Die aktive SQLAlchemy-Datenbanksession.
-            obj_id: Die ID des zu suchenden Objekts.
-
-        Returns:
-            Das gefundene SQLAlchemy-Objekt oder None, wenn es nicht existiert.
+        Ruft ein einzelnes Objekt anhand seiner primären ID ab.
         """
-        return db.query(self.model).filter(self.model.id == obj_id).first()
+        return db.get(self.model, obj_id)
 
     def get_all(self, db: Session) -> List[ModelT]:
         """
@@ -97,19 +90,30 @@ class BaseRepository(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         db.refresh(db_obj)
         return db_obj
 
-    def delete(self, db: Session, *, obj_id: int) -> Optional[ModelT]:
+
+    def delete(self, db: Session, *, obj_id: int = None, db_obj: ModelT = None) -> Optional[ModelT]:
         """
-        Löscht ein Objekt anhand seiner ID aus der Datenbank.
+        Löscht ein Objekt aus der Datenbank.
+
+        Kann entweder über die ID oder ein bereits geladenes SQLAlchemy-Objekt erfolgen.
 
         Args:
             db: Die aktive SQLAlchemy-Datenbanksession.
             obj_id: Die ID des zu löschenden Objekts.
+            db_obj: Das bereits geladene, zu löschende Objekt.
 
         Returns:
             Das gelöschte Objekt oder None, wenn es nicht gefunden wurde.
         """
-        obj = db.query(self.model).get(obj_id)
-        if obj:
-            db.delete(obj)
+        if db_obj:
+            obj_to_delete = db_obj
+        elif obj_id:
+            obj_to_delete = db.get(self.model, obj_id)
+        else:
+            raise ValueError("Entweder obj_id oder db_obj muss angegeben werden.")
+
+        if obj_to_delete:
+            db.delete(obj_to_delete)
             db.commit()
-        return obj
+
+        return obj_to_delete

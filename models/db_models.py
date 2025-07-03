@@ -1,4 +1,4 @@
-# pylint: disable=too-few-public-methods
+# pylint: disable=too-few-public-methods, not-callable
 """
 Definiert die SQLAlchemy ORM-Modelle für die D&D Companion-Anwendung.
 
@@ -22,8 +22,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now, onupdate=func.now)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     characters = relationship("Character", back_populates="owner")
 
@@ -37,8 +37,8 @@ class Character(Base):
     gameclass = Column(String)
     level = Column(Integer, default=1)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now, onupdate=func.now)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     owner = relationship("User", back_populates="characters")
     items = relationship(
@@ -62,8 +62,8 @@ class Item(Base):
     name_de = Column(String, nullable=False)
     description_en = Column(Text)
     description_de = Column(Text)
-    created_at = Column(DateTime(timezone=True), server_default=func.now)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now, onupdate=func.now)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     character_items = relationship("CharacterItem", back_populates="item")
 
@@ -87,8 +87,8 @@ class Spell(Base):
     components = Column(String)
     duration = Column(String)
     school = Column(String)
-    created_at = Column(DateTime(timezone=True), server_default=func.now)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now, onupdate=func.now)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     character_spells = relationship("CharacterSpell", back_populates="spell")
 
