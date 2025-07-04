@@ -9,7 +9,7 @@ import os
 from functools import lru_cache
 from typing import List, Optional
 
-import requests
+import httpx
 from dotenv import load_dotenv
 
 from .errors import raise_api_error
@@ -31,7 +31,7 @@ def normalize_name(name: str) -> str:
 
 
 # pylint: disable=inconsistent-return-statements
-def fetch_details_from_dnd_api(endpoint: str, name_normalized: str) -> Optional[dict]:
+async def fetch_details_from_dnd_api(endpoint: str, name_normalized: str) -> Optional[dict]:
     """
     Ruft Detailinformationen von einem bestimmten Endpunkt der D&D 5e API ab.
 
@@ -45,18 +45,19 @@ def fetch_details_from_dnd_api(endpoint: str, name_normalized: str) -> Optional[
     """
     url = f"https://www.dnd5eapi.co/api/{endpoint}/{name_normalized}"
     try:
-        response = requests.get(url, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError as e:
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
         if e.response.status_code == 404:
             return None
         raise e
-    except requests.exceptions.RequestException as e:
+    except httpx.RequestError as e:
         raise_api_error(503, "SERVICE_UNAVAILABLE", f"Error fetching from D&D API: {e}")
 
 
-def translate_text_with_deepl(text: str, target_lang: str) -> str:
+async def translate_text_with_deepl(text: str, target_lang: str) -> str:
     """
     Übersetzt einen gegebenen Text mit der DeepL API.
 
@@ -71,18 +72,18 @@ def translate_text_with_deepl(text: str, target_lang: str) -> str:
             "text": text,
             "target_lang": target_lang.upper(),
         }
-        response = requests.post(DEEPL_API_URL, data=params, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        translated_text = response.json()["translations"][0]["text"]
-        return translated_text
-    except requests.exceptions.RequestException as e:
-        print(f"DeepL API Error: {e}")
-        return "Übersetzung fehlgeschlagen."
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            response = await client.post(DEEPL_API_URL, data=params)
+            response.raise_for_status()
+            translated_text = response.json()["translations"][0]["text"]
+            return translated_text
+    except httpx.RequestError as e:
+        raise_api_error(503, "TRANSLATION_FAILED", f"DeepL API Error: {e}")
 
 
 @lru_cache(maxsize=1)
 # pylint: disable=inconsistent-return-statements
-def fetch_dnd_classes_from_api() -> List[str]:
+async def fetch_dnd_classes_from_api() -> List[str]:
     """
     Ruft die Liste der verfügbaren Charakterklassen von der D&D 5e API ab.
 
@@ -91,11 +92,12 @@ def fetch_dnd_classes_from_api() -> List[str]:
     """
     url = "https://www.dnd5eapi.co/api/classes"
     try:
-        response = requests.get(url, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        data = response.json()
-        return [item["name"] for item in data.get("results", [])]
-    except requests.exceptions.RequestException as e:
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            response = await client.get(url, timeout=REQUEST_TIMEOUT)
+            response.raise_for_status()
+            data = response.json()
+            return [item["name"] for item in data.get("results", [])]
+    except httpx.RequestError as e:
         raise_api_error(
             503, "SERVICE_UNAVAILABLE", f"Error fetching classes from D&D API: {e}"
         )

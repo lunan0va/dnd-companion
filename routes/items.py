@@ -45,7 +45,7 @@ def get_item(item_id: int, db: Session = Depends(get_db)):
     status_code=status.HTTP_201_CREATED,
     summary="Neues Item aus der D&D-API erstellen und zwischenspeichern",
 )
-def create_item_from_api(
+async def create_item_from_api(
     request: ItemCreateRequest,
     _current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -59,7 +59,7 @@ def create_item_from_api(
         model_class=Item,
         api_endpoint="equipment",
     )
-    return get_or_create_api_object(
+    return await get_or_create_api_object(
         db=db,
         request_name=request.name,
         config=config,

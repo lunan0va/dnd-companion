@@ -37,7 +37,7 @@ Die Anwendung ist auf einem eigenen **Ubuntu-Server** gehostet und folgt moderne
 
 Die vollständige und interaktive API-Dokumentation wird automatisch von FastAPI generiert und ist unter folgendem Link erreichbar. Dort können alle Endpunkte direkt im Browser getestet werden:
 
-https://api.luns.dev/api/v1/docs
+https://api.luns.dev/docs
 
 ## Datenmodell
 

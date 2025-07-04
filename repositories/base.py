@@ -6,7 +6,7 @@ Schnittstelle für grundlegende Datenbankoperationen (Create, Read, Update, Dele
 bietet. Sie verwendet Python Generics und TypeVars, um stark typisiert und
 flexibel für jedes SQLAlchemy-Modell zu sein.
 """
-from typing import Generic, Type, TypeVar, List, Optional, Any
+from typing import Generic, Type, TypeVar, List, Optional
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from models import Base

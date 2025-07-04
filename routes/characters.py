@@ -159,7 +159,9 @@ def add_spell_to_character(
 ):
     """Fügt einen Zauber zur Zauberliste eines Charakters hinzu."""
     if spell in [cs.spell for cs in character.spells]:
-        raise_api_error(409, "SPELL_ALREADY_EXISTS", "Zauber ist bereits mit dem Charakter verbunden.")
+        raise_api_error(
+            409, "SPELL_ALREADY_EXISTS", "Zauber ist bereits mit dem Charakter verbunden."
+        )
 
     character_repo.add_spell_to_character(db=db, character=character, spell_id=spell.id)
 

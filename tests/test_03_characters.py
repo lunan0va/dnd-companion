@@ -107,3 +107,39 @@ def test_character_item_association_flow(auth_client, mocker):
 
     final_char_res = auth_client.get(f"/characters/{character_id}")
     assert len(final_char_res.json()["items"]) == 0
+
+
+def test_create_character_with_invalid_class(auth_client, mocker):
+    """Testet, dass die Charaktererstellung mit einer ungültigen Klasse fehlschlägt."""
+    mocker.patch('routes.characters.fetch_dnd_classes_from_api', return_value=["Fighter", "Wizard"])
+
+    create_response = auth_client.post(
+        "/characters",
+        json={"name": "Grog", "gameclass": "Barbarian", "level": 5}
+    )
+    assert create_response.status_code == 400
+    assert create_response.json()["detail"]["error"]["code"] == "INVALID_CLASS_NAME"
+
+
+def test_user_cannot_access_other_users_character(auth_client, client, mocker):
+    """
+    Stellt sicher, dass ein Benutzer eine 404-Fehlermeldung erhält,
+    wenn er versucht, auf den Charakter eines anderen Benutzers zuzugreifen.
+    """
+    mocker.patch('routes.characters.fetch_dnd_classes_from_api', return_value=["Fighter"])
+
+    create_response = auth_client.post(
+        "/characters",
+        json={"name": "Grog", "gameclass": "Fighter", "level": 5}
+    )
+    assert create_response.status_code == 201
+    character_id = create_response.json()["id"]
+
+    client.post("/register", json={"username": "user2", "password": "password2"})
+    login_res = client.post("/login", data={"username": "user2", "password": "password2"})
+    token2 = login_res.json()["access_token"]
+    client.headers = {"Authorization": f"Bearer {token2}"}
+
+    get_response = client.get(f"/characters/{character_id}")
+    assert get_response.status_code == 404
+    assert get_response.json()["detail"]["error"]["code"] == "CHARACTER_NOT_FOUND"

@@ -2,6 +2,7 @@
 Hilfsfunktionen für die API-Routen, um Code-Duplizierung zu vermeiden.
 """
 from typing import Type, Callable, Optional
+import asyncio
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 from models import Base
@@ -31,15 +32,13 @@ class APIObjectConfig(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-def get_or_create_api_object(
+async def get_or_create_api_object(
     db: Session,
     request_name: str,
     config: APIObjectConfig,
 ) -> Base:
     """
     Holt ein Objekt aus der DB oder erstellt es via D&D-API, wenn es nicht existiert.
-
-    Kapselt die Logik des Nachsehens, Abrufens, Übersetzens, Erstellens und Speicherns.
     """
     normalized_name = normalize_name(request_name)
 
@@ -47,7 +46,7 @@ def get_or_create_api_object(
     if existing_obj:
         return existing_obj
 
-    api_data = fetch_details_from_dnd_api(config.api_endpoint, normalized_name)
+    api_data = await fetch_details_from_dnd_api(config.api_endpoint, normalized_name)
     if not api_data:
         raise_api_error(
             404,
@@ -57,8 +56,12 @@ def get_or_create_api_object(
 
     name_en = api_data.get("name")
     description_en = "\n".join(api_data.get("desc", []))
-    name_de = translate_text_with_deepl(name_en, "de")
-    description_de = translate_text_with_deepl(description_en, "de")
+
+    translation_results = await asyncio.gather(
+        translate_text_with_deepl(name_en, "de"),
+        translate_text_with_deepl(description_en, "de")
+    )
+    name_de, description_de = translation_results
 
     model_data = {
         "dnd_api_id": api_data.get("index"),

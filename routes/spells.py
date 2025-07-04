@@ -57,7 +57,7 @@ def get_spell(spell_id: int, db: Session = Depends(get_db)):
     status_code=status.HTTP_201_CREATED,
     summary="Neuen Zauber aus der D&D-API erstellen und zwischenspeichern",
 )
-def create_spell_from_api(
+async def create_spell_from_api(
     request: SpellCreateRequest,
     _current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -72,7 +72,7 @@ def create_spell_from_api(
         api_endpoint="spells",
         extra_fields_factory=_get_spell_specific_fields,
     )
-    return get_or_create_api_object(
+    return await get_or_create_api_object(
         db=db,
         request_name=request.name,
         config=config,
