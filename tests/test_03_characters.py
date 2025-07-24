@@ -8,7 +8,9 @@ def test_character_full_crud_flow(auth_client, mocker):
     Testet den kompletten Lebenszyklus eines Charakters:
     Create -> Read (all) -> Read (one) -> Update -> Delete.
     """
-    mocker.patch('routes.characters.fetch_dnd_classes_from_api', return_value=["Fighter", "Wizard"])
+    async def mock_classes():
+        return ["Fighter", "Wizard"]
+    mocker.patch('routes.characters.fetch_dnd_classes_from_api', side_effect=mock_classes)
 
     create_response = auth_client.post(
         "/characters",
@@ -47,7 +49,9 @@ def test_character_spell_association_flow(auth_client, mocker):
     """
     Testet das Hinzufügen und Entfernen eines Zaubers zu einem Charakter.
     """
-    mocker.patch('routes.characters.fetch_dnd_classes_from_api', return_value=["Wizard"])
+    async def mock_classes():
+        return ["Wizard"]
+    mocker.patch('routes.characters.fetch_dnd_classes_from_api', side_effect=mock_classes)
     mock_spell_data = {
         "index": "magic-missile", "name": "Magic Missile", "desc": ["..."],
         "level": 1, "casting_time": "1 Action", "range": "120 feet",
@@ -81,7 +85,9 @@ def test_character_item_association_flow(auth_client, mocker):
     """
     Testet das Hinzufügen und Entfernen eines Items zu einem Charakter.
     """
-    mocker.patch('routes.characters.fetch_dnd_classes_from_api', return_value=["Fighter"])
+    async def mock_classes():
+        return ["Fighter"]
+    mocker.patch('routes.characters.fetch_dnd_classes_from_api', side_effect=mock_classes)
     mock_item_data = {
         "index": "greatsword", "name": "Greatsword", "desc": ["A mighty two-handed sword."]
     }
@@ -111,7 +117,9 @@ def test_character_item_association_flow(auth_client, mocker):
 
 def test_create_character_with_invalid_class(auth_client, mocker):
     """Testet, dass die Charaktererstellung mit einer ungültigen Klasse fehlschlägt."""
-    mocker.patch('routes.characters.fetch_dnd_classes_from_api', return_value=["Fighter", "Wizard"])
+    async def mock_classes():
+        return ["Fighter", "Wizard"]
+    mocker.patch('routes.characters.fetch_dnd_classes_from_api', side_effect=mock_classes)
 
     create_response = auth_client.post(
         "/characters",
@@ -126,7 +134,9 @@ def test_user_cannot_access_other_users_character(auth_client, client, mocker):
     Stellt sicher, dass ein Benutzer eine 404-Fehlermeldung erhält,
     wenn er versucht, auf den Charakter eines anderen Benutzers zuzugreifen.
     """
-    mocker.patch('routes.characters.fetch_dnd_classes_from_api', return_value=["Fighter"])
+    async def mock_classes():
+        return ["Fighter"]
+    mocker.patch('routes.characters.fetch_dnd_classes_from_api', side_effect=mock_classes)
 
     create_response = auth_client.post(
         "/characters",
