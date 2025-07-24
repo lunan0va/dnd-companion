@@ -45,7 +45,7 @@ async def validate_game_class(gameclass: str):
     Prüft, ob der übergebene Klassenname gültig ist, indem er mit der D&D-API abgeglichen wird.
     Wirft einen API-Fehler, wenn die Klasse ungültig ist.
     """
-    valid_classes = fetch_dnd_classes_from_api()
+    valid_classes = await fetch_dnd_classes_from_api()
     if gameclass.lower() not in [cls.lower() for cls in valid_classes]:
         error_msg = f"Ungültiger Klassenname. Erlaubte Klassen sind: {', '.join(valid_classes)}"
         raise_api_error(400, "INVALID_CLASS_NAME", error_msg)
