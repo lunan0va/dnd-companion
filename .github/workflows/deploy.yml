@@ -21,6 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest "pytest-cov[toml]" pytest-mock
@@ -30,7 +31,9 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        run: pytest
+        run: |
+          cd backend
+          pytest
 
   deploy:
     needs: test
@@ -48,6 +51,6 @@ jobs:
             cd ~/dnd-companion
             git pull origin main
             source .venv/bin/activate
-            pip install -r requirements.txt
+            pip install -r backend/requirements.txt
             deactivate
             sudo systemctl restart dnd-companion.service

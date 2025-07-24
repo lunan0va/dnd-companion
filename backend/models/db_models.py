@@ -7,7 +7,7 @@ einschließlich Benutzer, Charaktere, Items und Zauber, sowie die
 Assoziationstabellen für deren Many-to-Many-Beziehungen.
 """
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint
+    Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint, Boolean
 )
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.sql import func
@@ -33,9 +33,34 @@ class Character(Base):
     __tablename__ = "characters"
 
     id = Column(Integer, primary_key=True, index=True)
+    
     name = Column(String, nullable=False)
     gameclass = Column(String)
     level = Column(Integer, default=1)
+    species = Column(String)
+    background = Column(String)
+    alignment = Column(String)
+    experience_points = Column(Integer, default=0)
+    strength = Column(Integer)
+    dexterity = Column(Integer)
+    constitution = Column(Integer)
+    intelligence = Column(Integer)
+    wisdom = Column(Integer)
+    charisma = Column(Integer)
+    armor_class = Column(Integer)
+    initiative = Column(Integer)
+    speed = Column(Integer)
+    hit_points_max = Column(Integer)
+    hit_points_current = Column(Integer)
+    hit_dice = Column(String)
+    inspiration = Column(Boolean, default=False)
+    proficiency_bonus = Column(Integer)
+    passive_perception = Column(Integer)
+    languages = Column(String)
+    notes = Column(Text)
+    image = Column(String)
+    biography = Column(Text)
+
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
