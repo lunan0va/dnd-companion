@@ -48,9 +48,9 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd ~/dnd-companion/backend
+            cd ~/dnd-companion
             git pull origin main
             source .venv/bin/activate
-            pip install -r requirements.txt
+            pip install -r backend/requirements.txt
             deactivate
             sudo systemctl restart dnd-companion.service
