@@ -1,0 +1,68 @@
+.login-container {
+  max-width: 400px;
+  margin: 5rem auto 0 auto;
+  background: rgba(24, 20, 17, 0.92);
+  border: 2px solid #e0c97f;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px #000a;
+  padding: 2.5rem 2rem 2rem 2rem;
+  color: #e0c97f;
+  font-family: 'Cinzel', serif;
+}
+
+.login-title {
+  text-align: center;
+  color: #e0c97f;
+  font-family: 'Cinzel', serif;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  letter-spacing: 0.08em;
+  text-shadow: 1px 1px 8px #0008;
+}
+
+.login-container label {
+  color: #e0c97f;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+}
+
+.login-container input[type='text'],
+.login-container input[type='password'] {
+  background: #fffbe6;
+  border: 1.5px solid #e0c97f;
+  border-radius: 6px;
+  color: #181411;
+  font-size: 1.1rem;
+  margin-bottom: 1.2rem;
+  padding: 0.5rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.login-container input[type='text']:focus,
+.login-container input[type='password']:focus {
+  outline: none;
+  border-color: #bfa76a;
+  box-shadow: 0 0 6px #e0c97f88;
+}
+
+.login-container button {
+  width: 100%;
+  background: #e0c97f;
+  color: #181411;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  font-size: 1.1rem;
+  padding: 0.7rem 0;
+  margin-top: 0.5rem;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 8px #0006;
+  transition: background 0.2s, color 0.2s;
+}
+
+.login-container button:hover {
+  background: #171210;
+  color: #e0c97f;
+}

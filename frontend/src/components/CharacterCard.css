@@ -1,0 +1,44 @@
+.character-card {
+    background: rgba(24, 20, 17, 0.97);
+    border: 2px solid #e0c97f;
+    border-radius: 12px;
+    color: #e0c97f;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    font-family: 'Cinzel', serif;
+    box-shadow: 0 4px 16px #000a;
+  }
+  .character-avatar img {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid #e0c97f;
+    margin-right: 1.5rem;
+  }
+  .character-name {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  .character-class, .character-level {
+    font-size: 1.1rem;
+  }
+
+  .dashboard-title {
+    color: #181411;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.1em;
+    margin-bottom: 2rem;
+    text-align: center;
+    text-shadow: 1px 1px 4px #0008;
+    margin-top: 2.5rem;
+    margin-bottom: 2.5rem;
+    text-align: center;
+    font-size: 2.5rem;
+    letter-spacing: 0.1em;
+  }
+
+  .row {
+    justify-content: center;
+  }

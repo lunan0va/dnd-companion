@@ -1,0 +1,26 @@
+.navbar {
+    background: #181411 !important;
+    border-bottom: 2px solid #e0c97f;
+    font-family: 'Cinzel', serif;
+    box-shadow: 0 2px 8px #0008;
+  }
+  
+  .navbar-brand {
+    color: #e0c97f !important;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    font-size: 1.5rem;
+  }
+  
+  .navbar-nav .nav-link {
+    color: #e0c97f !important;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
+  }
+  
+  .navbar-nav .nav-link:hover,
+  .navbar-nav .nav-link.active {
+    color: #fffbe6 !important;
+    text-shadow: 0 0 8px #e0c97f88;
+  }

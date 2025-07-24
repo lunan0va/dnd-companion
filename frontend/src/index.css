@@ -1,0 +1,6 @@
+body {
+    background: url('/bg-fantasy.jpg') center center / cover no-repeat, #181411;
+    color: #e0c97f;
+    min-height: 100vh;
+    font-family: 'Cinzel', serif;
+  }
