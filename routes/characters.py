@@ -40,7 +40,7 @@ def get_item_dependency(item_id: int, db: Session = Depends(get_db)) -> Item:
     return item
 
 
-def validate_game_class(gameclass: str):
+async def validate_game_class(gameclass: str):
     """
     Prüft, ob der übergebene Klassenname gültig ist, indem er mit der D&D-API abgeglichen wird.
     Wirft einen API-Fehler, wenn die Klasse ungültig ist.
@@ -102,13 +102,13 @@ def get_character(character: Character = Depends(get_character_for_user)):
     status_code=status.HTTP_201_CREATED,
     summary="Einen neuen Charakter erstellen",
 )
-def create_character(
+async def create_character(
     char_create: CharacterCreate,
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Erstellt einen neuen Charakter für den aktuell eingeloggten Benutzer."""
-    validate_game_class(char_create.gameclass)
+    await validate_game_class(char_create.gameclass)
     return character_repo.create_for_user(
         db=db, obj_in=char_create, user_id=current_user.id
     )
@@ -119,7 +119,7 @@ def create_character(
     response_model=CharacterResponse,
     summary="Einen bestehenden Charakter aktualisieren",
 )
-def update_character(
+async def update_character(
     char_update: CharacterUpdate,
     character: Character = Depends(get_character_for_user),
     db: Session = Depends(get_db),
@@ -127,7 +127,7 @@ def update_character(
     """Aktualisiert die Daten eines bestehenden Charakters."""
     update_data = char_update.model_dump(exclude_unset=True)
     if "gameclass" in update_data:
-        validate_game_class(update_data["gameclass"])
+        await validate_game_class(update_data["gameclass"])
 
     return character_repo.update(db=db, db_obj=character, obj_in=char_update)
 
