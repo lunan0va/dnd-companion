@@ -43,7 +43,7 @@ async def fetch_details_from_dnd_api(endpoint: str, name_normalized: str) -> Opt
         Ein Dictionary mit den API-Daten oder None, wenn das Objekt nicht gefunden wurde (404).
         Löst bei anderen Fehlern eine Exception aus.
     """
-    url = f"https://www.dnd5eapi.co/api/{endpoint}/{name_normalized}"
+    url = f"https://www.dnd5eapi.co/api/2014/{endpoint}/{name_normalized}"
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
             response = await client.get(url)
@@ -90,7 +90,7 @@ async def fetch_dnd_classes_from_api() -> List[str]:
     Das Ergebnis wird zwischengespeichert (gecached), um wiederholte API-Aufrufe
     zu vermeiden.
     """
-    url = "https://www.dnd5eapi.co/api/classes"
+    url = "https://www.dnd5eapi.co/api/2014/classes"
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
             response = await client.get(url, timeout=REQUEST_TIMEOUT)
