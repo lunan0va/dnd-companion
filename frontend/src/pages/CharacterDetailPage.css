@@ -1,0 +1,85 @@
+.char-sheet-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 80vh;
+    background: none;
+    margin-top: 2rem;
+  }
+  
+  .char-sheet {
+    background: rgba(24, 20, 17, 0.13);
+    border: 3px double #e0c97f;
+    border-radius: 18px;
+    box-shadow: 0 4px 24px #000a;
+    padding: 2.5rem 2.5rem 2rem 2.5rem;
+    min-width: 400px;
+    max-width: 600px;
+    width: 100%;
+    font-family: 'Cinzel', serif;
+    color: #181411;
+    position: relative;
+  }
+  
+  .char-header {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+  
+  .char-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    border: 2px solid #e0c97f;
+    background: #fffbe6;
+    object-fit: cover;
+    box-shadow: 0 2px 8px #0006;
+  }
+  
+  .char-name {
+    color: #e0c97f;
+    font-size: 2.2rem;
+    margin-bottom: 0.2rem;
+    letter-spacing: 0.08em;
+    text-shadow: 1px 1px 8px #0008;
+  }
+  
+  .char-class-level {
+    font-size: 1.2rem;
+    color: #3a2d1a;
+    font-weight: bold;
+  }
+  
+  .char-divider {
+    border: none;
+    border-top: 2px solid #e0c97f;
+    margin: 1.5rem 0;
+  }
+  
+  .char-section {
+    margin-bottom: 1.5rem;
+  }
+  
+  .char-section h2 {
+    color: #bfa76a;
+    font-size: 1.3rem;
+    margin-bottom: 0.7rem;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #e0c97f44;
+    padding-bottom: 0.2rem;
+  }
+  
+  .char-attributes {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.3rem 1.5rem;
+  }
+  
+  .char-attributes li {
+    color: #181411;
+    font-size: 1.05rem;
+  }
